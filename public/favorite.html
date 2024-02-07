@@ -1,0 +1,87 @@
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokeSearch</title>
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="favorite.html">Favorite</a></li>
+        </ul>
+    </nav>
+    <input id="input" type="text">
+    
+        <button id="btn" onclick="addFavorite(3)">Search</button>
+    <ol id="pokeitem"></ol>
+    <script>
+        const baseUrl = `https:pokeapi.co/api/v2/pokemon/`;
+        const patchFavorite = async (id, name) => {
+            const res = await fetch(`/api/pokemons/name`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id: id,
+                    name: name
+                })
+            });
+            const jsonRes = await res.json();
+        }
+        const deleteFavorite = async (id) => {
+            await fetch(`/api/pokemons/${id}`, {method: 'DELETE'});
+        }
+        let promises = [];
+        async function fetchFavoritePokemons() {
+            const favoriteList = await fetch(`/api/pokemons`);
+            const list = await favoriteList.json();
+            for (let i = 0; i < list.length; i++) {
+                const url = baseUrl + list[i].pokemon_id;
+                promises.push(fetch(url).then((res) => res.json()));
+            }
+
+            Promise.all(promises).then(results => {
+                const pokemon = results.map((data) => ({
+                    name: data.name,
+                    id: data.id,
+                    image: data.sprites['front_default'],
+                    type: data.types.map((type) => type.type.name).join(', ')
+                }));
+                displayPokemon(pokemon);
+            });
+            const displayPokemon = (pokemon) => {
+                pokemon.map((pokemon) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = pokemon.name;
+                    const img = document.createElement('img');
+                    img.src = pokemon.image;
+                    li.appendChild(img);
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    const deleteButton = document.createElement('button');
+                    deleteButton.innerText = 'Delete'
+                    deleteButton.addEventListener('click', () => {
+                        deleteFavorite(pokemon.id);
+                    });
+                    li.appendChild(input);
+                    const favoriteButton = document.createElement('button');
+                    favoriteButton.innerText = 'Change Name'
+                    favoriteButton.addEventListener('click', () => {
+                        const inputValue = input.value;
+                        patchFavorite(pokemon.id, inputValue);
+                    });
+                    li.appendChild(favoriteButton);
+                    li.appendChild(deleteButton);
+                    const ol = document.getElementById('pokeitem');
+                    ol.appendChild(li, img);
+                });
+
+            }
+        }
+        fetchFavoritePokemons();
+    </script>
+</body>
+
+</html>
